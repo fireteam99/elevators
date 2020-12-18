@@ -167,5 +167,3 @@ class Call:
 
 def simulate(time_series):
     pass
-
-# test
