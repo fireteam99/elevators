@@ -30,24 +30,28 @@ class Elevator:
 
         # log the internal state
         print('time:', self.time)
+        print('new calls:', [call.to_string() for call in new_calls])
         print('state:', self.state)
         print('current floor:', self.current_floor)
         print('seconds since state changed:', self.seconds_since_state_changed())
-        print()
+        print('passengers:', self.passenger_count())
+        print('direction:', self.direction)
 
         if self.state == 'IDLE':
             assert len([call for call in self.calls if call.state == 'BOARDED']) == 0
             open_calls = [call for call in self.calls if call.state == 'OPEN']
 
             if len(open_calls) > 0:
-                closest_open_call = min(self.calls, key=lambda call: abs(self.current_floor - call.origin))
-                if closest_open_call.origin == self.current_floor:  # change state to loading
-                    self.state = 'LOADING'
-                    self.time_last_state_changed = self.time
-                else:  # head towards the closest open call
-                    self.state = 'MOVING'
-                    self.time_last_state_changed = self.time
-                    self.direction = 1 if closest_open_call.origin > self.current_floor else -1
+                oldest_closest_open_call = min(
+                    self.calls,
+                    key=lambda c: (self.time - c.init_time, abs(self.current_floor - c.origin))
+                )
+                if oldest_closest_open_call.origin == self.current_floor:  # change state to loading
+                    self.transition_loading()
+                else:  # head towards the oldest closest open call
+                    self.transition_moving()
+                    print(f'heading towards floor {oldest_closest_open_call.origin}')
+                    self.direction = 1 if oldest_closest_open_call.origin > self.current_floor else -1
             else:
                 self.direction = 0
 
@@ -62,8 +66,7 @@ class Elevator:
             if (any(c.destination == self.current_floor for c in self.boarded_calls()) > 0
                     or (len(calls_at_floor_same_dir) > 0 and calls_at_floor_same_dir[
                         0].size < self.current_capacity())):
-                self.state = 'LOADING'
-                self.time_last_state_changed = self.time
+                self.transition_loading()
 
         elif self.state == 'LOADING':
             calls_at_floor = sorted(self.calls_at_floor(self.calls, self.current_floor), key=lambda c: c.size)
@@ -76,30 +79,32 @@ class Elevator:
                 # off-load arrived calls
                 for call in arrived_calls:
                     call.arrive(self.time)
+                    print(f'off-loading call: {call.to_string()} ')
 
                 # try to update direction if there no calls on board and calls at floor
                 if len(calls_at_floor) > 0 and len(self.boarded_calls()) == 0:
                     # find the direction of the oldest call at the floor
                     oldest_call = max(calls_at_floor, key=lambda c: self.time - c.init_time)
                     self.direction = oldest_call.direction()
+                    print(f'updating direction to: {self.direction}')
 
                 # find any calls at floor that are traveling the same direction as the elevator
                 calls_at_floor_same_dir = [call for call in calls_at_floor if call.direction() == self.direction]
 
                 # load as many same direction calls as possible
                 for call in calls_at_floor_same_dir:
-                    if call.size + self.current_capacity() <= self.max_capacity:
+                    if call.size + self.passenger_count() <= self.max_capacity:
                         call.board(self.time)
+                        print('loading call:', call.to_string())
                     else:
                         break
 
             else:  # if time is up close doors and transition to moving or idle
                 if len(self.boarded_calls()) > 0:  # if there are people on board continue moving
-                    self.state = 'MOVING'
+                    self.transition_moving()
                 else:  # otherwise switch into idle state
-                    self.state = 'IDLE'
+                    self.transition_idle()
                     self.direction = 0
-                self.time_last_state_changed = self.time
 
         # move elevator if necessary
         if self.state == 'MOVING':
@@ -112,6 +117,22 @@ class Elevator:
 
         # update time
         self.time += 1
+        print()
+
+    def transition_loading(self):
+        self.state = 'LOADING'
+        self.time_last_state_changed = self.time
+        print('transitioning to loading')
+
+    def transition_moving(self):
+        self.state = 'MOVING'
+        self.time_last_state_changed = self.time
+        print('transitioning to moving')
+
+    def transition_idle(self):
+        self.state = 'IDLE'
+        self.time_last_state_changed = self.time
+        print('transitioning to idle')
 
     def is_moving_up(self) -> bool:
         return self.state == 'MOVING' and self.direction == 1
@@ -119,8 +140,11 @@ class Elevator:
     def is_moving_down(self) -> bool:
         return self.state == 'MOVING' and self.direction == -1
 
-    def current_capacity(self) -> int:
+    def passenger_count(self) -> int:
         return sum([call.size for call in self.calls if call.state == 'BOARDED'])
+
+    def current_capacity(self) -> int:
+        return self.max_capacity - self.passenger_count()
 
     def boarded_calls(self):
         return [call for call in self.calls if call.state == 'BOARDED']
@@ -190,6 +214,9 @@ class Call:
     def to_json(self) -> str:
         pass
 
+    def to_string(self) -> str:
+        return f'init time: {self.init_time}, origin: {self.origin}, dest: {self.destination}, size: {self.size}'
+
 
 def simulate(time_series):
     elevator = Elevator(lobby_load_delay=5)
@@ -200,10 +227,19 @@ def simulate(time_series):
     return elevator.stats()
 
 
-def main():
+def basic_testcases():
+    # time_series = [[] for _ in range(20)]
+    # time_series[0].append(Call(origin=1, destination=2, size=1, init_time=0))
+    # print(simulate(time_series), '\n')
+
     time_series = [[] for _ in range(20)]
-    time_series[0] = [Call(origin=1, destination=5, size=1, init_time=0)]
-    print(simulate(time_series))
+    time_series[0].append(Call(origin=1, destination=2, size=1, init_time=0))
+    time_series[0].append(Call(origin=2, destination=3, size=1, init_time=0))
+    print(simulate(time_series), '\n')
+
+
+def main():
+    basic_testcases()
 
 
 if __name__ == '__main__':
