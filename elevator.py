@@ -59,8 +59,10 @@ class Elevator:
             calls_at_floor = sorted(
                 [call for call in self.calls if call.origin == self.current_floor], key=lambda c: c.size
             )
-            calls_at_floor_same_dir = [call for call in calls_at_floor if call.is_going_up()] if self.is_moving_up() \
-                else [call for call in calls_at_floor if call.is_going_down()]
+
+            # if the elevator is empty treat all calls as going in the same direction
+            calls_at_floor_same_dir = calls_at_floor if len(self.boarded_calls()) == 0 \
+                else [call for call in calls_at_floor if call.direction() == self.direction]
 
             # transition into loading if any boarded calls need to exit, or any calls at floor need to board
             if (any(c.destination == self.current_floor for c in self.boarded_calls()) > 0
@@ -228,13 +230,29 @@ def simulate(time_series):
 
 
 def basic_testcases():
+    # going up
     # time_series = [[] for _ in range(20)]
     # time_series[0].append(Call(origin=1, destination=2, size=1, init_time=0))
     # print(simulate(time_series), '\n')
 
+    # time_series = [[] for _ in range(20)]
+    # time_series[0].append(Call(origin=1, destination=2, size=1, init_time=0))
+    # time_series[0].append(Call(origin=2, destination=3, size=1, init_time=0))
+    # print(simulate(time_series), '\n')
+
+    # time_series = [[] for _ in range(20)]
+    # time_series[0].append(Call(origin=1, destination=2, size=1, init_time=0))
+    # time_series[1].append(Call(origin=1, destination=3, size=1, init_time=0))
+    # print(simulate(time_series), '\n')
+
+    # time_series = [[] for _ in range(21)]
+    # time_series[0].append(Call(origin=1, destination=3, size=1, init_time=0))
+    # time_series[2].append(Call(origin=2, destination=4, size=1, init_time=0))
+    # print(simulate(time_series), '\n')
+
+    # going down
     time_series = [[] for _ in range(20)]
-    time_series[0].append(Call(origin=1, destination=2, size=1, init_time=0))
-    time_series[0].append(Call(origin=2, destination=3, size=1, init_time=0))
+    time_series[0].append(Call(origin=2, destination=1, size=1, init_time=0))
     print(simulate(time_series), '\n')
 
 
