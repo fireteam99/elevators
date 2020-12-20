@@ -78,7 +78,7 @@ class TestElevatorMethods(unittest.TestCase):
         self.assertEqual(elevator.state, 'IDLE')
 
     def test_capacity(self):
-        elevator = Elevator(max_capacity=10, lobby_load_delay=1, load_delay=1, verbosity="low")
+        elevator = Elevator(max_capacity=10, lobby_load_delay=1, load_delay=1, verbosity="off")
         elevator.simulate_tick([
             Call(origin=1, destination=2, size=9, init_time=1),
             Call(origin=1, destination=2, size=2, init_time=1),
