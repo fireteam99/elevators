@@ -1,6 +1,7 @@
 import sys
 import unittest
-from elevator import Elevator, Call
+from elevator import Elevator
+from call import Call
 
 
 class TestCallMethods(unittest.TestCase):

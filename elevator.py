@@ -1,10 +1,12 @@
 import json
+from call import Call
 
 
 class Elevator:
     def __init__(
             self,
             current_floor=1,
+            lobby_floor=1,
             min_floor=1,
             max_floor=100,
             max_capacity=10,
@@ -14,10 +16,12 @@ class Elevator:
             verbosity='low'
     ) -> None:
         assert min_floor <= current_floor <= max_floor
+        assert min_floor <= lobby_floor <= max_floor
         self.max_capacity = max_capacity
         self.state = 'IDLE'
         self.calls = []
         self.current_floor = current_floor
+        self.lobby_floor = lobby_floor
         self.min_floor = min_floor
         self.max_floor = max_floor
         self.time_last_state_changed = 0
@@ -89,8 +93,8 @@ class Elevator:
             arrived_calls = [call for call in self.boarded_calls() if call.destination == self.current_floor]
 
             # if time is not up, keep doors open, and load/off-load any passengers
-            if (self.current_floor != 1 and self.seconds_since_state_changed() <= self.load_delay) \
-                    or (self.current_floor == 1 and self.seconds_since_state_changed() <= self.lobby_load_delay):
+            if (self.current_floor != self.lobby_floor and self.seconds_since_state_changed() <= self.load_delay) \
+                    or (self.current_floor == self.lobby_floor and self.seconds_since_state_changed() <= self.lobby_load_delay):
 
                 # off-load arrived calls
                 for call in arrived_calls:
@@ -201,45 +205,6 @@ class Elevator:
             return average_wait_time, average_ride_time
         else:
             return None, None
-
-
-class Call:
-    def __init__(self, origin: int, destination: int, size: int, init_time: int, state='OPEN') -> None:
-        self.origin = origin
-        self.destination = destination
-        self.size = size
-        self.init_time = init_time
-        self.board_time = None
-        self.arrival_time = None
-        self.state = state
-
-    def is_going_up(self) -> bool:
-        return self.destination > self.origin
-
-    def is_going_down(self) -> bool:
-        return self.origin > self.destination
-
-    def direction(self) -> int:
-        return 1 if self.is_going_up() else -1
-
-    def board(self, time) -> None:
-        assert self.state == 'OPEN'
-        self.state = 'BOARDED'
-        self.board_time = time
-
-    def arrive(self, time) -> None:
-        assert self.state == 'BOARDED'
-        self.state = 'ARRIVED'
-        self.arrival_time = time
-
-    def from_json(self, j: str):
-        pass
-
-    def to_json(self) -> str:
-        pass
-
-    def to_string(self) -> str:
-        return f'init time: {self.init_time}, origin: {self.origin}, dest: {self.destination}, size: {self.size}'
 
 
 def simulate(time_series):
