@@ -226,7 +226,7 @@ class Elevator:
         if self.direction != 0 and self.direction != call.direction():
             distance *= 2
 
-        return open_calls + boarded_calls + distance
+        return open_calls + boarded_calls / 2 + distance
 
     def stats(self):
         arrived_calls = [call for call in self.calls if call.state == 'ARRIVED']
