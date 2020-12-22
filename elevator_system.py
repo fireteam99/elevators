@@ -1,5 +1,5 @@
 import numpy as np
-from pprint import pprint
+import matplotlib.pyplot as plt
 
 from elevator import Elevator
 from call import Call
@@ -20,6 +20,7 @@ class ElevatorSystem:
             lobby_dest_freq=0.5,
             mean=1,
             stdv=1,
+            max_call_size=5,
     ) -> None:
         assert 0 <= call_freq <= 1
         assert 0 <= lobby_call_freq <= 1
@@ -50,6 +51,7 @@ class ElevatorSystem:
         np.random.seed(seed)
         self.mean = mean
         self.stdv = stdv
+        self.max_call_size = max_call_size
 
     def generate_calls(self, t) -> [Call]:
         min_floor = self.elevator_config['min_floor']
@@ -63,7 +65,7 @@ class ElevatorSystem:
                 calls.append(Call(
                     origin=floor,
                     destination=self.generate_call_destination(floor),
-                    size=self.generate_call_size(),
+                    size=self.generate_call_size(self.mean, self.stdv),
                     init_time=t
                 ))
         if random.random() < self.lobby_call_freq:
@@ -81,20 +83,18 @@ class ElevatorSystem:
         max_floor = self.elevator_config['max_floor']
         lobby_floor = self.elevator_config['lobby_floor']
         floors = list(range(min_floor, max_floor + 1))
-        skewed_floors = floors + [lobby_floor * (len(floors) - 1)]
-
+        skewed_floors = floors + [lobby_floor] * (len(floors) - 1)
         destination = random.choice([f for f in skewed_floors if f != origin])
         return destination
 
-    @staticmethod
-    def generate_call_size(mean=1, stdv=1) -> int:
+    def generate_call_size(self, mean=1, stdv=1) -> int:
         normal_std = np.sqrt(np.log(1 + (mean / stdv) ** 2))
         normal_mean = np.log(mean) - normal_std ** 2 / 2
         size, = np.random.lognormal(normal_mean, normal_std, size=1)
         rounded = round(size)
 
-        if rounded > 5:
-            return 5
+        if rounded > self.max_call_size:
+            return self.max_call_size
         elif rounded < 1:
             return 1
         else:
@@ -124,7 +124,7 @@ class ElevatorSystem:
         return [el.logs for el in self.elevators]
 
 
-def demo():
+def demo() -> None:
     es = ElevatorSystem(seed=0, verbosity='high', elevator_count=3, elevator_config={
                 'current_floor': 1,
                 'lobby_floor': 1,
@@ -142,11 +142,29 @@ def demo():
 def visualize_calls():
     es = ElevatorSystem(seed=2)
 
-    timescale = []
-    for x in range(10):
-        timescale.append([call.to_string() for call in es.generate_calls(x)])
-    pprint(timescale)
+    calls = []
+    for x in range(1000):
+        calls += es.generate_calls(x)
+
+    origins = []
+    destinations = []
+    sizes = []
+    for call in calls:
+        origins.append(call.origin)
+        destinations.append(call.destination)
+        sizes.append(call.size)
+
+    plt.hist(origins, bins=range(es.elevator_config['min_floor'], es.elevator_config['max_floor']))
+    plt.show()
+
+    plt.hist(destinations, bins=range(es.elevator_config['min_floor'], es.elevator_config['max_floor']))
+    plt.show()
+
+    plt.hist(sizes, bins=range(1, es.max_call_size + 1))
+    plt.xticks(range(1, es.max_call_size))
+    plt.show()
 
 
 if __name__ == '__main__':
     demo()
+    visualize_calls()
