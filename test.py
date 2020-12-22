@@ -2,6 +2,7 @@ import sys
 import unittest
 from elevator import Elevator
 from call import Call
+from elevator_system import ElevatorSystem
 
 
 class TestCallMethods(unittest.TestCase):
@@ -101,6 +102,20 @@ class TestElevatorMethods(unittest.TestCase):
         self.assertEqual(elevator.state, 'MOVING')
         elevator.simulate_tick([])
         self.assertEqual(elevator.state, 'LOADING')
+
+
+class TestElevatorSystemMethods(unittest.TestCase):
+    def test_generate_call_destination(self):
+        elevator_system = ElevatorSystem()
+        sample = [elevator_system.generate_call_destination(5) for _ in range(1000)]
+        elevator_config = elevator_system.elevator_config
+        min_floor = elevator_config['min_floor']
+        max_floor = elevator_config['max_floor']
+        self.assertTrue(all(min_floor <= x <= max_floor and x != 5 for x in sample))
+
+    def test_generate_call_size(self):
+        sample = [ElevatorSystem.generate_call_size() for _ in range(1000)]
+        self.assertTrue(all(1 <= x <= 5 for x in sample))
 
 
 if __name__ == "__main__":
