@@ -228,7 +228,8 @@ class Elevator:
 
         return open_calls + boarded_calls / 2 + distance
 
-    def stats(self):
+    def stats(self) -> (int, int, int):
+        """returns the number of arrived calls along with the average wait time and average ride time"""
         arrived_calls = [call for call in self.calls if call.state == 'ARRIVED']
 
         if len(arrived_calls) > 0:
@@ -237,9 +238,9 @@ class Elevator:
             # average time in elevator
             average_ride_time = sum([call.arrival_time - call.board_time for call in arrived_calls]) / len(
                 arrived_calls)
-            return average_wait_time, average_ride_time
+            return len(arrived_calls), average_wait_time, average_ride_time
         else:
-            return None, None
+            return 0, 0, 0
 
 
 def simulate(time_series):

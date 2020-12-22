@@ -52,6 +52,7 @@ class ElevatorSystem:
         self.mean = mean
         self.stdv = stdv
         self.max_call_size = max_call_size
+        self.logs = []
 
     def generate_calls(self, t) -> [Call]:
         min_floor = self.elevator_config['min_floor']
@@ -87,7 +88,7 @@ class ElevatorSystem:
         destination = random.choice([f for f in skewed_floors if f != origin])
         return destination
 
-    def generate_call_size(self, mean=1, stdv=1) -> int:
+    def generate_call_size(self, mean=1, stdv=1) -> tuple:
         normal_std = np.sqrt(np.log(1 + (mean / stdv) ** 2))
         normal_mean = np.log(mean) - normal_std ** 2 / 2
         size, = np.random.lognormal(normal_mean, normal_std, size=1)
@@ -121,8 +122,18 @@ class ElevatorSystem:
             if self.verbosity != 'off':
                 print('---------------------------------------------------')
 
-        return [el.logs for el in self.elevators]
+        self.logs = [el.logs for el in self.elevators]
 
+        count = 0
+        avg_wait = 0
+        avg_ride = 0
+        for el in self.elevators:
+            ec, ew, er = el.stats()
+            avg_wait = (avg_wait * count + ew * ec) / (count + ec)
+            avg_ride = (avg_ride * count + er * ec) / (count + ec)
+            count += ec
+
+        return count, avg_wait, avg_ride
 
 def demo() -> None:
     es = ElevatorSystem(seed=0, verbosity='high', elevator_count=3, elevator_config={
@@ -136,7 +147,11 @@ def demo() -> None:
                 'time': 0,
                 'verbosity': 'high'
     })
-    es.simulate(100)
+    count, avg_wait, avg_ride = es.simulate(100)
+    print('Calls Arrived:', count)
+    print('Average Wait Time:', avg_wait)
+    print('Average Ride Time', avg_ride)
+    print('Average Total Time', avg_wait + avg_ride)
 
 
 def visualize_calls():
